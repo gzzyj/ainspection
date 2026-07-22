@@ -1,0 +1,551 @@
+{
+  "project": "ainspection",
+  "baseline_version": "2.0",
+  "baseline_description": "架构基线: adapter 模式 + skill/hook Plan B injection + 6 agent 穷举 config + Source symlink",
+  "created_at": "2026-05-12T15:00:00+08:00",
+  "updated_at": "2026-05-18T14:00:00+08:00",
+  "tasks": [
+    {
+      "id": "P0-1",
+      "title": "CLI 项目骨架",
+      "status": "completed",
+      "phase": "P0",
+      "agent": "claude-code",
+      "completed_at": "2026-05-10T10:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "cmd/ainspection/main.go",
+        "cmd/{run,config,session,eval,doctor,common}/",
+        "go.mod",
+        "Makefile",
+        "internal/config/"
+      ]
+    },
+    {
+      "id": "P0-2",
+      "title": "树形上下文 manager",
+      "status": "completed",
+      "phase": "P0",
+      "agent": "claude-code",
+      "completed_at": "2026-05-10T14:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/tree/"
+      ]
+    },
+    {
+      "id": "P0-3",
+      "title": "Session 生命周期管理",
+      "status": "completed",
+      "phase": "P0",
+      "agent": "claude-code",
+      "completed_at": "2026-05-10T18:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/session/",
+        "internal/llm/"
+      ]
+    },
+    {
+      "id": "P0-4",
+      "title": "Skill 加载与注入",
+      "status": "completed",
+      "phase": "P0",
+      "agent": "claude-code",
+      "completed_at": "2026-05-11T10:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/skill/",
+        "internal/prompt/"
+      ]
+    },
+    {
+      "id": "P0-5",
+      "title": "qtmf DB/Redis trace 日志",
+      "status": "pending",
+      "phase": "P0",
+      "agent": "",
+      "token_used": 0,
+      "conformance_passed": false,
+      "deliverables": [
+        "qtmf MR: providers/qmgox/middleware.go",
+        "providers/redisx/hook.go"
+      ],
+      "note": "归属 qtmf 仓 MR，非 ainspection 代码"
+    },
+    {
+      "id": "P0-6",
+      "title": "Orchestrator 流水线引擎",
+      "status": "completed",
+      "phase": "P0",
+      "agent": "claude-code",
+      "completed_at": "2026-05-11T14:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/orchestrator/ (9 阶段骨架)"
+      ],
+      "note": "阶段结构完成，get/verify/commit 为占位"
+    },
+    {
+      "id": "P1-1",
+      "title": "Doctor 命令",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-11T12:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "cmd/doctor/cmd.go",
+        "internal/doctor/check.go"
+      ]
+    },
+    {
+      "id": "P1-2",
+      "title": "双阶段 MCTS 引擎",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-11T16:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/mcts/"
+      ]
+    },
+    {
+      "id": "P1-3",
+      "title": "Planner Agent",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-11T18:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/planner/",
+        "prompts/plan-system.tmpl"
+      ],
+      "note": "规则式实现"
+    },
+    {
+      "id": "P1-4",
+      "title": "沙箱与审计",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-11T20:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/security/"
+      ]
+    },
+    {
+      "id": "P1-5",
+      "title": "get 工作流",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-12T09:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "prompts/get-system.tmpl",
+        ".skills/jira-query.md"
+      ]
+    },
+    {
+      "id": "P1-6",
+      "title": "locate 交互式调查 (含 MCTS)",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-12T12:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "prompts/locate-system.tmpl",
+        "prompts/locate-disclose.tmpl",
+        "prompts/mcts-expand.tmpl"
+      ]
+    },
+    {
+      "id": "P1-7",
+      "title": "Capability Skill 集 (11 个)",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-12T14:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        ".skills/ 下 11 个 skill 文件全部存在"
+      ]
+    },
+    {
+      "id": "P1-8",
+      "title": "上下文防污染规范",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-11T15:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "docs/task-context.md"
+      ]
+    },
+    {
+      "id": "P1-9",
+      "title": "fix 工作流 (含 MCTS + diff-validate 门控)",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-13T16:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "prompts/fix-system.tmpl",
+        "tools/diff-validate/main.go",
+        "internal/orchestrator/pipeline.go (runDiffValidate + executeFix 门控集成)"
+      ],
+      "note": "A1: diff-validate 工具创建 + executeFix 门控集成（go build + diff-validate 校验）"
+    },
+    {
+      "id": "P1-10",
+      "title": "verify 工作流",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-13T14:45:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "prompts/verify-system.tmpl (done)",
+        ".skills/skaffold-deploy.md (done)",
+        ".skills/http-probe.md (done)",
+        ".skills/golangci-lint.md (P2-2 新增)",
+        ".skills/go-test.md (P2-2 新增)",
+        ".skills/go-build.md (P2-2 新增)",
+        ".skills/go-vet.md (P2-2 新增)"
+      ],
+      "note": "P2-2: executeVerify 升级为 LLM tool call dispatch（与 get/locate/commit 一致）"
+    },
+    {
+      "id": "P1-11",
+      "title": "commit 工作流",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-13T14:45:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "prompts/commit-system.tmpl (done)",
+        ".skills/glab-mr.md (done)",
+        ".skills/jira-update.md (done)"
+      ],
+      "note": "P2-3: executeCommit 集成测试完成 (5 个测试用例)"
+    },
+    {
+      "id": "P1-12",
+      "title": "Evaluator LLM 双路径实现",
+      "status": "completed",
+      "phase": "P1",
+      "agent": "claude-code",
+      "completed_at": "2026-05-13T16:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/orchestrator/evaluator_llm.go (Evaluator 接口实现)",
+        "prompts/review1-system.tmpl (locate 后审查)",
+        "prompts/review2-system.tmpl (fix 后主审查)",
+        "prompts/review3-system.tmpl (verify 后审查)",
+        "internal/orchestrator/evaluator.go (接口新增 taskID 参数)",
+        "internal/orchestrator/pipeline.go (executeReview1/2/3 适配 taskID)",
+        "internal/prompt/renderer.go (Review1Input/Review2Input/Review3Input 类型)"
+      ],
+      "note": "A2: Evaluator LLM 双路径（native Chat + CLI Run）实现，补上 review1/2/3 门控"
+    },
+    {
+      "id": "P2-1a",
+      "title": "INSTRUMENT 标记补充",
+      "status": "completed",
+      "phase": "P2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-13T14:30:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/mcts/engine.go (Run, selection, backprop)",
+        "internal/orchestrator/mcts_rollout.go (SimulateLocate, SimulateFix)",
+        "internal/orchestrator/rollout_executor.go (ExecuteLocateAction, ExecuteFixAction)",
+        "internal/orchestrator/mcts_wiring.go (NewMCTSRunnerWired)",
+        "internal/orchestrator/pipeline.go (executeVerify)",
+        "internal/planner/planner.go (BuildPlan)",
+        "internal/security/executor.go (Execute)",
+        "internal/skill/executor.go (Execute)"
+      ],
+      "note": "新增 12 处 INSTRUMENT 标记，累计 18 处（原有 6 + 新增 12）"
+    },
+    {
+      "id": "P2-2a",
+      "title": "verify 升级为 LLM tool call dispatch",
+      "status": "completed",
+      "phase": "P2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-13T14:40:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        ".skills/golangci-lint.md (新增 ghost skill)",
+        ".skills/go-test.md (新增 ghost skill)",
+        ".skills/go-build.md (新增 ghost skill)",
+        ".skills/go-vet.md (新增 ghost skill)",
+        "internal/orchestrator/pipeline.go (executeVerify 重写: LoadAll→Inject→LLM Chat→DispatchBatch→LLM判断)",
+        "删除 verifyCmd/getVerifyCommands/skillNameToCmdMap"
+      ],
+      "note": "verify 从固定命令+LLM结论升级为 LLM自主tool_call dispatch，与 get/locate/commit 一致"
+    },
+    {
+      "id": "P2-3a",
+      "title": "commit 阶段集成测试",
+      "status": "completed",
+      "phase": "P2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-13T14:50:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/orchestrator/pipeline_commit_test.go (5 个测试用例)"
+      ],
+      "note": "LLM Native tool_calls / 纯文本 / CLI adapter / adapter查找失败 / skill加载失败 — 全部通过"
+    },
+    {
+      "id": "P2-1",
+      "title": "Alloy DaemonSet",
+      "status": "completed",
+      "phase": "P2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-14T11:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "deploy/alloy/daemonset.yaml (DaemonSet + ConfigMap with River config)",
+        "deploy/alloy/rbac.yaml (SA + ClusterRole + Binding)",
+        "deploy/pyroscope/run.sh (docker run Pyroscope)",
+        "deploy/install.sh (--user/--pyroscope-endpoint 多用户管理)",
+        "deploy/cleanup.sh (一键清理)",
+        "deploy/scripts/check.sh (状态检查)",
+        "deploy/README.md (架构文档)"
+      ],
+      "note": "Alloy DaemonSet + Pyroscope docker + 5 profile types × N users 独立链路 + 自动安装/追加/清理"
+    },
+    {
+      "id": "P2-1-rollback",
+      "title": "install.sh 部署回退逻辑",
+      "status": "completed",
+      "phase": "P2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-14T12:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "deploy/install.sh (trap + STEP_DONE 位标记 + ConfigMap 备份/恢复 + Pyroscope 追踪)"
+      ],
+      "note": "删除 set -e，改为手动检查返回值；0x01 RBAC / 0x02 ConfigMap / 0x04 DaemonSet 位标记回退；ConfigMap 备份优先恢复"
+    },
+    {
+      "id": "P2-2",
+      "title": "Profile 读取工具",
+      "status": "completed",
+      "phase": "P2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-15T11:30:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "tools/pprof-summary/main.go",
+        ".skills/pprof-analyze.md (输出契约更新)",
+        "internal/prompt/renderer.go (ProfileAnalyzeInput 对齐嵌入文本字段)"
+      ],
+      "note": "薄包装 go tool pprof CLI，支持 Pyroscope/本地文件/diff 三种模式，top/tree/traces 文本直接嵌入 JSON"
+    },
+    {
+      "id": "P2-3",
+      "title": "AI Profile 分析",
+      "status": "completed",
+      "phase": "P2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-15T12:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "prompts/profile-analyze.tmpl (v3.0: 5 Parts, 14 bottleneck_types, 9 signal→root mappings, 5 community sources)"
+      ],
+      "note": "模板重写 v3.0，集成 Zepto/Uber/wolfogre/DataDog/中文社区 5 个来源的最佳实践；按 profile_type 分支决策树 + flamegraph 信号→根因关联表 + 跨 profile 交叉验证建议"
+    },
+    {
+      "id": "P2-4",
+      "title": "性能修复生成",
+      "status": "completed",
+      "phase": "P2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-15T13:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "prompts/profile-fix.tmpl (v2.0: 4 Parts, 14 bottleneck_type→strategy mappings, 4D perf scoring)",
+        "internal/prompt/renderer.go (ProfileFixInput 新增 PlanJSON 字段)"
+      ],
+      "note": "模板重写 v2.0: Part A 输入解读 + Part B 14种策略目录含 Go 改写示例 + Part C MCTS 性能修复流程含四维评分 + Part D JSON 输出 schema 与 plan-system 兼容"
+    },
+    {
+      "id": "P2-5",
+      "title": "离线评测框架 (L2 Prompt Smoke Test)",
+      "status": "completed",
+      "phase": "P2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-18T10:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/eval/types.go",
+        "internal/eval/smoke.go",
+        "internal/eval/case.go",
+        "cmd/eval/cmd.go",
+        "~/.ainspection/evals/cases/ (2 example cases)",
+        "docs/agents-eval.md (L2 重写)",
+        "prompts: 8 template field name fixes"
+      ],
+      "note": "降级 L3→L2: Smoke Runner 16/16 PASS + Case Runner 2/2 PASS; 修复 5 模板字段名对齐 Go struct"
+    },
+    {
+      "id": "P3-1",
+      "title": "run 一键流水线",
+      "status": "completed",
+      "phase": "P3",
+      "agent": "claude-code",
+      "completed_at": "2026-05-18T12:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/orchestrator/wiring.go",
+        "internal/orchestrator/dispatcher_adapter.go",
+        "cmd/run/run.go (重写)",
+        "prompts/run-orchestrator.tmpl",
+        "internal/prompt/renderer.go (新增 RunOrchestratorInput 类型)"
+      ]
+    },
+    {
+      "id": "P3-2",
+      "title": "跨服务调用链关联",
+      "status": "completed",
+      "phase": "P3",
+      "agent": "claude-code",
+      "completed_at": "2026-05-18T14:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/tree/types.go (TaskSpec + TraceID)",
+        "internal/orchestrator/types.go (RunSpec + TraceID)",
+        "internal/tree/tree.go (NewTask write trace_id)",
+        "cmd/run/run.go (--trace-id flag + 传参)",
+        "internal/orchestrator/pipeline.go (Run getOutputData executeGet writeGetInput readLocateInput readTraceIDFromTask)",
+        "internal/prompt/renderer.go (GetInput/LocateInput + TraceID)",
+        "prompts/get-system.tmpl (trace_id 输入 + 输出)",
+        "prompts/locate-system.tmpl (跨服务调用链关联指引)",
+        "prompts/locate-disclose.tmpl (trace_id 字段 + trace 信号格式)"
+      ]
+    },
+    {
+      "id": "V2-1",
+      "title": "文档基线重建 (含术语标准化、Plan B injection、穷举 config 等细化)",
+      "status": "completed",
+      "phase": "V2",
+      "agent": "claude-code",
+      "started_at": "2026-05-12T15:00:00+08:00",
+      "completed_at": "2026-05-12T19:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "AGENTS.md §0 术语标准 + Agent CLI 调研",
+        "docs/design.md §3 Plan B injection + §4 穷举 Config + §5 Source symlink",
+        "docs/agents-security.md §7 Hook CLI 差异 + §8 Source symlink 安全",
+        "docs/agents-workflow.md §8.3 Conformance 步骤 + §8.4 插桩标记",
+        "docs/BASELINE.md 重写",
+        "docs/todo.md 简化",
+        "progress.json 更新"
+      ],
+      "note": "合并原 V2-1 + V2-1b；含术语标准化、Plan B injection、穷举 config、Source symlink、插桩标记规范等 17 项细化"
+    },
+    {
+      "id": "V2-2",
+      "title": "adapter/injection 重构 — 6 adapter + Skill/Hook 统一注入",
+      "status": "completed",
+      "phase": "V2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-12T21:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "internal/adapter/types.go (AgentAdapter/SkillInjector/HookInjector 接口 + Registry)",
+        "internal/adapter/injection.go (JSON Schema 转换 + Bash 工具 + Skill Markdown 写入 + Hook 格式转换)",
+        "internal/adapter/claude_cli.go",
+        "internal/adapter/kimi_cli.go",
+        "internal/adapter/codex_cli.go",
+        "internal/adapter/qwen_cli.go",
+        "internal/adapter/gemini_cli.go",
+        "internal/adapter/llm_native.go (从 internal/llm/ 迁移 HTTP 直连 + SSE 流式)",
+        "internal/adapter/types_test.go (17 个单元测试)",
+        "internal/adapter/injection_test.go"
+      ],
+      "note": "6 adapter 全部实现 AgentAdapter + SkillInjector + HookInjector；LLM native 实现 HTTP 直连 + SSE 流式"
+    },
+    {
+      "id": "V2-3",
+      "title": "skill 重构 + 硬编码消除",
+      "status": "completed",
+      "phase": "V2",
+      "agent": "claude-code",
+      "completed_at": "2026-05-12T21:00:00+08:00",
+      "token_used": 0,
+      "conformance_passed": true,
+      "deliverables": [
+        "重构 injector.go: 移除 agent-type switch，使用 adapter.Registry + SkillInjector 委托",
+        "重构 executor.go: SkillPrefixAgentCmd 常量化，slices.Contains 优化",
+        "删除 adapter_claude.go / adapter_kimi.go / adapter_qwen.go / native.go / bash.go",
+        "硬编码配置化: pipeline.stages.{get,locate}.skills + max_survey_rounds",
+        "config 新增: EvaluatorConfig.MinPassScore, MCTSStageConfig LLM params, SecurityConfig.CommandTimeout, PipelineConfig",
+        "config.yaml.example 更新: pipeline stages, evaluator min_pass_score, MCTS LLM params, security command_timeout",
+        "30 个 skill 测试通过, 17 个 adapter 测试通过, 24 个 orchestrator 测试通过",
+        "go build ./... 零错误"
+      ],
+      "note": "合并原 V2-6 + V2-8 + V2-9；injector 从 hardcoded agent switch 升级为 adapter.Registry 委托模式"
+    }
+  ],
+  "rate_limits": {
+    "deepseek": {
+      "remaining": -1,
+      "reset_at": "",
+      "note": "待首次 LLM 调用后更新"
+    },
+    "anthropic": {
+      "remaining": -1,
+      "reset_at": "",
+      "note": "待首次 LLM 调用后更新"
+    }
+  },
+  "conformance": {
+    "last_check": "2026-05-18T14:00:00.000000",
+    "total_violations": 0,
+    "violations": [],
+    "summary": "P3-2: TraceID 端到端透传 — TaskSpec/RunSpec/GetInput/LocateInput + TraceID; CLI --trace-id flag → root input.yaml → get LLM output → writeGetInput → readLocateInput → locate-system prompt; 3 prompt templates 更新; go build && go vet && go test 全部通过"
+  }
+}

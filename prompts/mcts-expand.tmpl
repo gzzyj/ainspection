@@ -1,0 +1,51 @@
+---
+name: mcts-expand
+description: MCTS Expansion 步骤 prompt：让 LLM 给当前节点生子节点（双阶段共用）
+version: "1.0"
+stage: mcts
+---
+
+# mcts-expand
+
+你被 MCTS 引擎调用，任务：为给定父节点生成 N 个高质量子节点候选。
+
+## 输入
+
+```
+stage: {{ .Stage }}                    # locate | fix
+current_node: {{ .CurrentNode }}
+depth: {{ .Depth }}/{{ .MaxDepth }}
+branching_factor: {{ .BranchingFactor }}
+parent_summary: {{ .ParentSummary }}
+```
+
+## 输出（locate 阶段）
+
+```yaml
+children:
+  - hypothesis: "<进一步细化的子假设>"
+    confidence_self: 0.0-1.0
+    evidence_sketch: "<计划用什么 skill 验证>"
+  ... (生 {{ .BranchingFactor }} 个)
+```
+
+## 输出（fix 阶段）
+
+```yaml
+children:
+  - candidate_diff: |
+      @@ <unified diff>
+    approach_summary: "<一句话>"
+    confidence_self: 0.0-1.0
+  ... (生 {{ .BranchingFactor }} 个)
+```
+
+## 约束
+
+- 子节点必须**显著不同**（非简单变体）
+- 子节点必须**比父节点更具体**（locate：更细分根因；fix：更具体实现）
+- 不重复 parent 的同级 children（去重）
+- locate：不重复已 discarded 的假设
+- fix：不违反 plan.step 的 approach 边界
+
+每次 Expand 调用后由 Evaluator 给子节点打分（MCTSScorer），驱动 UCB1 选择下一步探索方向。

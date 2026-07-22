@@ -1,0 +1,298 @@
+# ainspection 配置文件
+# 使用方式: ainspection run --config config.yaml
+
+# ============================================================
+# k3s 集群（仅 kubeconfig，namespace 在 services 中按服务声明）
+# ============================================================
+k3s:
+  kubeconfig: "~/.kube/config"
+  context: "default"
+
+# ============================================================
+# 业务系统清单（B6：run --service <name> 在此查找）
+# ============================================================
+services:
+  - name: order-svc
+    repo_path: /opt/src_repo/order-svc
+    k8s_namespace: qingteng
+  - name: payment-svc
+    repo_path: /opt/src_repo/payment-svc
+    k8s_namespace: qingteng
+
+# ============================================================
+# Agent 配置（type 声明通信方式 + CLI/LLM 配置字段）
+# type 可选值: claude_cli | kimi_cli | codex_cli | qwen_cli | gemini_cli | llm_native
+# ============================================================
+agents:
+  # ─── Claude CLI ───
+  claude:
+    type: "claude_cli"
+    cli_binary: "claude"
+    model: "claude-opus-4-6"
+    skills_dir: ".claude/skills"
+    hooks_dir: ".claude/hooks"
+    settings_file: ".claude/settings.json"
+    endpoint: "${ANTHROPIC_BASE_URL}"
+    api_key: "${ANTHROPIC_API_KEY}"
+    timeout: 120
+    max_tokens: 4096
+    temperature: 0.7
+    native_tools: ["web_search"]
+
+  claude_sonnet:                       # Evaluator 与 Planner 默认走此实例
+    type: "claude_cli"
+    cli_binary: "claude"
+    model: "claude-sonnet-4-6"
+    skills_dir: ".claude/skills"
+    hooks_dir: ".claude/hooks"
+    settings_file: ".claude/settings.json"
+    endpoint: "${ANTHROPIC_BASE_URL}"
+    api_key: "${ANTHROPIC_API_KEY}"
+    native_tools: ["web_search"]
+
+  # ─── Kimi CLI ───
+  kimi:
+    type: "kimi_cli"
+    cli_binary: "kimi"
+    model: "kimi-k2"
+    skills_dir: ".kimi/skills"
+    hooks_dir: ".kimi"
+    settings_file: "config.toml"
+    api_key_env: "MOONSHOT_API_KEY"
+
+  # ─── Codex CLI ───
+  codex:
+    type: "codex_cli"
+    cli_binary: "codex"
+    model: "gpt-5.3-codex"
+    skills_dir: ".codex/skills"
+    hooks_dir: ".codex"
+    hooks_file: "hooks.json"
+    settings_file: "config.toml"
+    features:
+      skills: true
+      hooks: true
+
+  # ─── Qwen CLI ───
+  qwen:
+    type: "qwen_cli"
+    cli_binary: "qwen"
+    model: "qwen3-max"
+    skills_dir: ".qwen/skills"
+    hooks_dir: ".qwen/hooks"            # nightly 功能，可用性检测
+    settings_file: "settings.json"
+    flags: ["--experimental-skills"]
+
+  # ─── Gemini CLI ───
+  gemini:
+    type: "gemini_cli"
+    cli_binary: "gemini"
+    model: "gemini-2.5-pro"
+    skills_dir: ".gemini/skills"
+    hooks_dir: ".gemini/hooks"
+    settings_file: "settings.json"
+
+  # ─── LLM Native (HTTP 直连，兜底) ───
+  llm_native:
+    type: "llm_native"
+    endpoint: "${ANTHROPIC_BASE_URL}"
+    api_key: "${ANTHROPIC_API_KEY}"
+    model: "claude-opus-4-6"
+    timeout: 120
+    max_tokens: 4096
+    temperature: 0.7
+    headers:
+      anthropic-version: "2023-06-01"
+    skill_injection_mode: "tools"       # tools | messages | both
+
+# ============================================================
+# 可观测性（Loki = 应用层日志含 qtmf mongo/redis op；Tempo = 调用链 span tree）
+# ============================================================
+observability:
+  loki_url: "http://loki.monitoring:3100"
+  prometheus_url: "http://prometheus.monitoring:9090"
+  tempo_url: "http://tempo.monitoring:3200"
+
+gitlab:
+  instance: "https://git.qingteng.cn"
+  token: "${GITLAB_TOKEN}"
+
+# ============================================================
+# Feishu / Lark 全局凭证（feishu-search skill 用，仅作为证据采集 source）
+# ============================================================
+lark:
+  app_id: "${LARK_APP_ID}"
+  app_secret: "${LARK_APP_SECRET}"
+
+# ============================================================
+# SkillDef 与 Prompt 模板
+# SkillDef 以 markdown + YAML frontmatter 格式存储，由 SkillDef Loader 解析
+# ============================================================
+skills:
+  path: ".skills/"
+
+prompts:
+  path: "prompts/"
+
+# ============================================================
+# 流水线各阶段配置
+# ============================================================
+pipeline:
+  stages:
+    get:
+      skills: ["jira-query", "feishu-search"]
+    locate:
+      skills: ["loki-query", "prom-query", "kubectl-inspect", "tempo-query", "feishu-search"]
+      max_survey_rounds: 3
+    verify:
+      skills: ["skaffold-deploy", "http-probe", "loki-query", "prom-query"]
+    commit:
+      skills: ["glab-mr", "jira-update"]
+
+# ============================================================
+# Tree / Context 配置
+# ============================================================
+context:
+  threshold_pct: 40
+  max_depth: 5
+  summary_max_chars: 500
+
+# ============================================================
+# Agent 安全配置（详见 docs/agents-security.md）
+# ============================================================
+security:
+  command_timeout: 60                # 命令执行超时秒数
+  baseline_commands:                 # 基线验证命令列表
+    - "go build ./..."
+    - "go vet ./..."
+
+  # 命令白名单：Agent 只能执行匹配的命令
+  allowed_commands:
+    - pattern: "git (status|diff|log|branch|checkout|add|commit)"
+      auto_approve: true
+    - pattern: "git push"
+      auto_approve: false
+    - pattern: "glab mr (create|view|list)"
+      auto_approve: false
+    - pattern: "go (build|vet|test|mod) .*"
+      auto_approve: true
+    - pattern: "golangci-lint run .*"
+      auto_approve: true
+    - pattern: "gofumpt .*"
+      auto_approve: true
+    - pattern: "goimports .*"
+      auto_approve: true
+    - pattern: "skaffold (build|deploy|run)"
+      auto_approve: false
+    - pattern: "kubectl (get|describe|logs|port-forward) .*"
+      auto_approve: true
+    - pattern: "kubectl (apply|delete|edit|exec) .*"
+      auto_approve: false
+    - pattern: "diff-validate .*"
+      auto_approve: true
+    - pattern: "pprof-summary .*"
+      auto_approve: true
+    # Skill 调用走 internal/skill executor，approval 由 skill frontmatter.approval_level 决定
+    - pattern: "ainspection-skill (jira-query|loki-query|prom-query|tempo-query|feishu-search|kubectl-inspect|pprof-analyze|http-probe) .*"
+      auto_approve: true
+    - pattern: "ainspection-skill (jira-update|skaffold-deploy|glab-mr) .*"
+      auto_approve: false
+
+  # 禁止的命令模式（即使匹配 allowed_commands）
+  blocked_patterns:
+    - ".*rm\\s+-rf.*"
+    - ".*\\|.*"
+    - ".*&&.*"
+    - ".*;.*"
+    - ".*\\$\\(.*"
+    - ".*`.*"
+
+  # 文件系统边界（沙箱 = 会话级 working dir + FS Guard）
+  filesystem:
+    allowed_read:
+      - "~/.ainspection/sessions/<session-id>/"
+      - "~/.ainspection/tasks/<task-id>/"
+      - "<services[].repo_path>/"
+      - "~/.kube/config"
+    allowed_write:
+      - "~/.ainspection/sessions/<session-id>/"
+      - "~/.ainspection/tasks/<task-id>/"
+      - "<services[].repo_path>/"     # 仅 patches/ 子目录
+
+  # 沙箱：会话级 working dir + 7 天 hot retention 后压缩归档
+  sandbox:
+    enabled: true
+    working_dir_root: "~/.ainspection/sessions/"
+    hot_retention_days: 7
+    archive_format: "tar.gz"          # 过期 session 压缩为 tar.gz 长存
+
+  # 审计日志（独立模块 internal/security/audit.go，jsonl 按天轮转）
+  audit:
+    path: "~/.ainspection/audit/"
+    retention_days: 30
+    rotation: "daily"
+
+# ============================================================
+# Evaluator Agent 配置（详见 docs/agents-evaluator.md）
+# ============================================================
+evaluator:
+  enabled: true
+  agent: "claude_sonnet"             # 独立模型做审查
+  review_stages:
+    - after_locate                   # locate 后的根因审查
+    - after_fix                      # fix 后的主代码审查
+    - after_verify                   # verify 后的验证结果审查
+  max_review_retries: 2              # 同一阶段最多退回重审次数
+  min_pass_score: 7                   # 最低通过评分（1-10）
+  confidence_divergence_threshold: 0.2  # LLM 自评 vs Evaluator 校准发散阈值（B5 双源）
+
+# ============================================================
+# Planner Agent 配置（详见 docs/agents-planner.md）
+# ============================================================
+planner:
+  enabled: true
+  agent: "claude"                    # 默认 Opus，复杂结构化推理
+  trigger: "after_review_locate"     # locate Evaluator review #1 通过后启动
+
+# ============================================================
+# 双阶段 MCTS 配置（详见 docs/agents-mcts.md）
+# ============================================================
+mcts:
+  locate:
+    max_iterations: 16
+    max_depth: 4
+    branching_factor: 3              # 每次 Expansion 让 LLM 给 N 个子假设
+    expand_temperature: 0.3          # Expansion LLM 温度
+    expand_max_tokens: 1024          # Expansion LLM max tokens
+    score_temperature: 0.1           # Simulation 评分 LLM 温度
+    score_max_tokens: 512            # Simulation 评分 LLM max tokens
+  fix:
+    max_iterations: 8
+    max_depth: 3
+    branching_factor: 2              # 每个 PlanStep 生成 N 种候选 diff
+    expand_temperature: 0.3
+    expand_max_tokens: 1024
+    score_temperature: 0.1
+    score_max_tokens: 512
+  ucb_c: 1.41                        # UCB1 探索常数
+  rollout_exec:
+    max_real_steps: 2                # Rollout 最大真实执行步数
+    per_action_timeout_s: 30         # 单动作超时秒数
+
+# ============================================================
+# 任务级重试上限（详见 docs/agents-workflow.md）
+# ============================================================
+retry:
+  max_per_stage: 2                   # 每阶段重试上限
+  fallback_agent: "qwen"             # LLM 无效输出降级备选（D4：冷启动 + 错误提示）
+  llm_max_retries: 2                 # LLM 调用最大重试次数
+
+# ============================================================
+# 离线评测（P2 启用，详见 docs/agents-eval.md）
+# ============================================================
+evals:
+  enabled: false
+  source: "gitlab+jira"              # MR title 含 fix/<JIRA-ID> 抽取 case
+  gitlab_filter: "title ~ 'fix/[A-Z]+-[0-9]+'"
+  jira_filter: "project IN (MS, AOS) AND status = Closed"
+  output_dir: "~/.ainspection/evals/"

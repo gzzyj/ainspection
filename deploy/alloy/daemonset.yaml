@@ -1,0 +1,66 @@
+---
+# DaemonSet: Alloy 每节点一个 Pod
+# 管理方式: deploy/install.sh --user=<name> --pyroscope-endpoint=<ip>
+# ConfigMap (alloy-config) 由 install.sh 动态生成, 不包含在本文件中.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: alloy
+  namespace: __NAMESPACE__
+  labels:
+    app: alloy
+    app.kubernetes.io/name: alloy
+spec:
+  selector:
+    matchLabels:
+      app: alloy
+  template:
+    metadata:
+      labels:
+        app: alloy
+    spec:
+      serviceAccountName: alloy
+      # hostNetwork: false (default)
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.7.5
+          args:
+            - "run"
+            - "/etc/alloy/config.alloy"
+            - "--storage.path=/tmp/alloy"
+            - "--server.http.listen-addr=0.0.0.0:12345"
+            - "--stability.level=public-preview"
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - name: http-metrics
+              containerPort: 12345
+              protocol: TCP
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: alloy-config
+              mountPath: /etc/alloy
+              readOnly: true
+            - name: alloy-data
+              mountPath: /tmp/alloy
+      volumes:
+        - name: alloy-config
+          configMap:
+            name: alloy-config
+        - name: alloy-data
+          emptyDir: {}

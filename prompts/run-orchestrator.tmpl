@@ -1,0 +1,173 @@
+---
+name: run-orchestrator
+description: 9 阶段流水线整体编排策略：阶段定义、门控规则、工具分配、质量门禁、输出契约
+version: "1.0"
+stage: run
+---
+
+{{- define "RunOrchestratorInput" -}}
+Pipeline orchestrator 全局调度策略，定义 9 阶段流程和门控规则。
+{{- end -}}
+
+# run-orchestrator — 流水线整体编排
+
+你是 ainspection 的流水线编排器 (Orchestrator)，负责按 9 个阶段顺序执行完整的诊断修复流水线。
+
+## 1. 输入契约
+
+- **说明**: 本模板为元模板，定义流水线整体策略，由 orchestrator 引擎读取，不作为 LLM system prompt 渲染
+- **引擎根据此策略将 RunSpec 分发到各阶段的对应模板**:
+  - Stage `get` → `get-system.tmpl`
+  - Stage `locate` → `locate-system.tmpl` + `locate-disclose.tmpl`
+  - Stage `review1` → `review1-system.tmpl`
+  - Stage `plan` → `plan-system.tmpl`
+  - Stage `fix` → `fix-system.tmpl`
+  - Stage `review2` → `review2-system.tmpl`
+  - Stage `verify` → `verify-system.tmpl`
+  - Stage `review3` → `review3-system.tmpl`
+  - Stage `commit` → `commit-system.tmpl`
+
+## 2. 阶段流程
+
+```
+Input (RunSpec)
+  │
+  ├─[1] get ──────→ scope_defined
+  │     │ 解析 issue/desc/profile → 确定 service + problem_domain
+  │     │ 工具: jira-query, feishu-search
+  │     │ 输出: input.yaml (service, issue_ref, symptoms, time_window)
+  │     ▼
+  ├─[2] locate ────→ expectation_locked
+  │     │ 多轮调查: loki-query → prom-query → kubectl-inspect → tempo-query
+  │     │ 每轮 disclose findings（假设 + 证据）
+  │     │ 输出: findings[] + discarded_hypotheses[]
+  │     ▼
+  ├─[3] review1 ───→ (continue/blocked/expectation_locked)
+  │     │ Evaluator 审查 locate 结果
+  │     │ 门控: pass → plan, fail → retry locate, blocked → 转人工
+  │     ▼
+  ├─[4] plan ──────→ fixing
+  │     │ Planner 从 findings 生成修复计划
+  │     │ 输出: plan.json (goal + steps + alternatives + checklists)
+  │     ▼
+  ├─[5] fix ───────→ (continue/blocked)
+  │     │ 按 plan.steps 逐步修改代码
+  │     │ 每步: diff → go build → diff-validate
+  │     │ 输出: patches/ + patch info
+  │     ▼
+  ├─[6] review2 ───→ (continue/blocked/verifying)
+  │     │ Evaluator 审查 fix 结果（主 review）
+  │     │ 门控: pass → verify, fail → retry fix, blocked → 转人工
+  │     ▼
+  ├─[7] verify ────→ (continue/blocked)
+  │     │ 部署 + 接口验证: skaffold-deploy → http-probe → go-test
+  │     │ 输出: deploy_result + http_status + test_passed
+  │     ▼
+  ├─[8] review3 ───→ (continue/blocked/committing)
+  │     │ Evaluator 审查 verify 结果
+  │     │ 门控: pass → commit, fail → retry verify, blocked → 转人工
+  │     ▼
+  └─[9] commit ────→ done
+        │ 创建 MR + 更新 Jira
+        │ 工具: glab-mr, jira-update
+        │ 输出: mr_url + jira_status
+        ▼
+       done
+```
+
+## 3. 门控规则
+
+| 转换 | 条件 | blocked 条件 |
+|------|------|-------------|
+| get → locate | task.status == scope_defined | — |
+| locate → review1 | task.status == expectation_locked | — |
+| review1 → plan | evaluator.score >= min_pass_score | review1 blocked |
+| plan → fix | task.status == fixing (plan.json present) | — |
+| fix → review2 | go build + diff-validate 全通过 | build/diff 失败 |
+| review2 → verify | evaluator.score >= min_pass_score | review2 blocked |
+| verify → review3 | deploy + probe + test 通过 | verify 失败 |
+| review3 → commit | evaluator.score >= min_pass_score | review3 blocked |
+| commit → done | MR created + Jira updated | — |
+
+## 4. 工具分配
+
+### 按阶段的 skill 列表
+
+| 阶段 | L1 Skills | L2 Native Tools |
+|------|-----------|-----------------|
+| get | jira-query, feishu-search | web_search |
+| locate | loki-query, prom-query, kubectl-inspect, tempo-query, feishu-search | web_search |
+| plan | (Planner 独立 session, 无 skill) | — |
+| fix | pprof-analyze (仅 profile 模式) | — |
+| verify | skaffold-deploy, http-probe, golangci-lint, go-test, go-build, go-vet | — |
+| commit | glab-mr, jira-update | — |
+
+### L3 Bash 工具
+
+- 白名单校验后自动执行: go build, go vet, go test, golangci-lint
+- 由 security.CommandExecutor 控制白名单 + blocked_patterns
+
+## 5. 质量门禁
+
+### 每个阶段的完成标准
+
+1. **get**: input.yaml 包含 service + issue_ref + problem_domain
+2. **locate**: 至少 1 个 confirmed finding (confidence >= 0.5)
+3. **review1**: Evaluator 四维评分 (correctness, evidence, verifiability, impact) >= 7
+4. **plan**: plan.json 通过 JSON Schema 校验，steps 非空
+5. **fix**: 每个 patch 通过 go build + diff-validate
+6. **review2**: Evaluator 四维评分 (completeness, quality, compliance, security) >= 7
+7. **verify**: deploy OK + HTTP 2xx + tests passed
+8. **review3**: Evaluator 审查 verify 输出
+9. **commit**: MR URL 非空 + Jira 状态已更新
+
+### 重试策略
+
+- 每阶段最大重试次数: 2 (config: retry.max_per_stage)
+- locate 多轮调查: config pipeline.stages.locate.max_survey_rounds (默认 3)
+- review 失败 → 回到上一阶段重试 (review1→locate, review2→fix, review3→verify)
+- 阶段级重试超限 → 标记 blocked → 转人工
+
+## 6. 输出契约
+
+### PipelineStatus (JSON, 写入 stdout)
+
+```json
+{
+  "task_id": "<yyyymmdd-HHMMSS-rand4>",
+  "current_stage": "commit",
+  "started_at": "<ISO8601>",
+  "updated_at": "<ISO8601>",
+  "stage_results": [
+    {"stage": "get",    "status": "scope_defined",    "node_id": "n1-get",    "duration": "2s"},
+    {"stage": "locate", "status": "expectation_locked", "node_id": "n2-locate", "duration": "45s"},
+    ...
+  ]
+}
+```
+
+### 文件系统产出
+
+```
+~/.ainspection/tasks/<task-id>/
+  context.yaml       — 任务状态
+  tree.yaml          — 节点拓扑
+  summary.md         — 人工可读摘要
+  nodes/<id>/
+    input.yaml       — 节点输入
+    output.yaml      — 节点输出 (findings/plan/patch/review)
+    meta.yaml        — 节点元数据
+  patches/           — diff patch 文件
+  signals/           — 证据信号文件
+  sessions/          — 各 session 的持久化记录
+```
+
+## 7. 错误处理
+
+| 错误类型 | 策略 | 最终状态 |
+|---------|------|---------|
+| LLM 不可用 | 输出 prompt 内容到 session dir，标记 blocked | blocked |
+| skill 加载失败 | 降级：跳过该 skill，继续可用部分 | 影响质量但不阻塞 |
+| go build 失败 | retry fix (最多 2 次)，超限转 blocked | blocked |
+| deploy 失败 | retry verify (最多 2 次)，超限转 blocked | blocked |
+| 用户中断 (Ctrl+C) | 保存当前 task state，标记为 interrupted | interrupted |

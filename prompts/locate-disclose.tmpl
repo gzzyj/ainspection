@@ -1,0 +1,86 @@
+---
+name: locate-disclose
+description: locate 阶段每轮 Disclose 的输出格式约束
+version: "2.0"
+stage: locate
+---
+
+# locate-disclose
+
+你必须按以下 YAML 格式输出每轮调查状态。在 ```yaml 代码块中输出。
+
+## 输出格式
+
+```yaml
+trace_id: <hex string|null>  # 可选，若输入提供了 trace id
+
+findings:
+  - hypothesis: <假设描述>
+    confidence_self: <0.0-1.0 自身置信度>
+    confidence_final: <0.0-1.0 综合置信度>
+    evidence:
+      - <证据文件路径或数据摘要>
+    status: investigating    # investigating | confirmed
+
+discarded_hypotheses:
+  - hypothesis: <已排除假设>
+    evidence_against: <排除原因/证据>
+    status: discarded
+```
+
+## 约束
+
+- findings ≥ 3 个
+- discarded_hypotheses ≥ 1 个
+- 每个 finding 至少 1 条 evidence
+- evidence 必须来自实际工具调用结果，不臆造
+- status 字段: investigating（调查中）/ confirmed（已确认）/ discarded（已排除）
+
+## 示例
+
+```yaml
+trace_id: abc123def456
+
+findings:
+  - hypothesis: payment-svc 慢查询导致超时
+    confidence_self: 0.80
+    confidence_final: 0.75
+    evidence:
+      - loki: 10:30-10:35 出现大量 slow_query 日志
+      - tempo: payment-svc span 平均耗时 3.2s
+    status: investigating
+  - hypothesis: 数据库连接池耗尽
+    confidence_self: 0.60
+    confidence_final: 0.55
+    evidence:
+      - prom: db_connections gauge 达到 max 100
+    status: investigating
+  - hypothesis: 上游调用方未设置超时导致连接堆积
+    confidence_self: 0.40
+    confidence_final: 0.38
+    evidence:
+      - tempo: 上游 caller-svc 无 timeout header
+    status: investigating
+
+discarded_hypotheses:
+  - hypothesis: 网络分区导致超时
+    evidence_against: tempo 确认所有 span 在同一 AZ，无网络延迟异常
+    status: discarded
+```
+
+此外，在 YAML 代码块之前，输出简短的信号采集摘要（log/trace/metric/biz 各一行），以及下一步可选方向列表：
+
+```
+[Round N] 信号采集摘要
+- log:   ...
+- trace: ...  # 若提供 trace_id，格式: tempo: <trace_id> → hop1(svc=?, dur=?ms) → hop2(svc=?, dur=?ms) → ...
+- metric:...
+- biz:   ...
+
+下一步可选方向
+[1] 深入 ... — confidence X risk Y
+[2] 切换 ... — confidence X risk Y
+[3] 排查 ... — confidence X risk Y
+```
+
+自动化流水线中，每轮后自主从方向列表中选择 confidence 最高的 top-1 继续。
